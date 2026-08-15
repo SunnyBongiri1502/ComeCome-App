@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Spark — Video Dating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0f0b18; font-family:'Inter',sans-serif; color:#f3eaf5; }
+  #app { position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  .screen { flex:1; display:none; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  #setup { align-items:center; justify-content:center; padding:32px; text-align:center; }
+  #setup .logo { font-family:'Fraunces',serif; font-style:italic; font-size:34px; color:#ff5d73; margin-bottom:6px; }
+  #setup .logo span { color:#f2b84b; }
+  #setup .tagline { color:#a897b6; font-size:13px; margin-bottom:32px; }
+  #setup input {
+    width:100%; max-width:280px; padding:14px 16px; border-radius:12px; border:1px solid #ffffff22;
+    background:#211a2e; color:#f3eaf5; font-size:15px; margin-bottom:12px; outline:none;
+  }
+  #setup input:focus { border-color:#ff5d73; }
+  #findBtn {
+    width:100%; max-width:280px; padding:15px; border-radius:14px; border:none;
+    background:linear-gradient(160deg,#ff5d73,#ff8b6b); color:#fff; font-weight:700; font-size:15px; margin-top:10px;
+  }
+  #findBtn:active { transform:scale(0.97); }
+  #findBtn:disabled { opacity:0.6; }
+
+  #waiting { align-items:center; justify-content:center; text-align:center; padding:32px; }
+  .spinner { width:52px; height:52px; border:4px solid #ffffff18; border-top-color:#ff5d73; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:22px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #waiting .msg { font-size:15px; color:#c9b8d6; margin-bottom:26px; }
+  #cancelBtn { padding:12px 28px; border-radius:12px; border:1px solid #ffffff22; background:transparent; color:#c9b8d6; font-size:13px; }
+
+  #callScreen { position:relative; background:#0a0712; }
+  #remoteVideo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#1c1628; }
+  #remoteFallback {
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;
+  }
+  #remoteAvatar { width:130px; height:130px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:50px; font-weight:600; background:linear-gradient(160deg,#4a2f5e,#2b1e40); margin-bottom:14px; }
+  #callTop { position:absolute; top:0; left:0; right:0; z-index:3; padding:46px 20px 16px; text-align:center; background:linear-gradient(180deg, rgba(10,7,18,0.7), transparent); }
+  #callStatus { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#c9b8d6; }
+  #callName { font-family:'Fraunces',serif; font-size:20px; margin-top:2px; }
+  #callTimer { font-size:13px; color:#f3eaf5; margin-top:4px; font-variant-numeric:tabular-nums; }
+
+  #localPip { position:absolute; top:110px; right:16px; width:90px; height:128px; border-radius:14px; overflow:hidden; background:#211a2e; border:2px solid #ffffff22; z-index:5; }
+  #localPip video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+
+  #callControls { position:absolute; bottom:0; left:0; right:0; z-index:3; display:flex; justify-content:center; gap:20px; padding:22px 24px 40px; background:linear-gradient(0deg, rgba(10,7,18,0.75), transparent); }
+  .call-btn { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; background:#211a2ecc; color:#f3eaf5; border:1px solid #ffffff15; }
+  .call-btn.on { background:#ffffff33; }
+  #endCallBtn { width:64px; height:64px; background:#ff3b3b; color:#fff; font-size:24px; }
+  .call-btn:active { transform:scale(0.9); }
+
+  .hint { position:fixed; bottom:8px; left:0; right:0; text-align:center; font-size:10px; color:#4a3f5c; z-index:10; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div class="screen active" id="setup">
+    <div class="logo">spark<span>.</span></div>
+    <div class="tagline">Real-time video matching</div>
+    <input type="text" id="nameInput" placeholder="Your name" maxlength="20">
+    <input type="number" id="ageInput" placeholder="Your age" min="18" max="99">
+    <button id="findBtn">Find a Match</button>
+  </div>
+
+  <div class="screen" id="waiting">
+    <div class="spinner"></div>
+    <div class="msg">Looking for someone to match you with…</div>
+    <button id="cancelBtn">Cancel</button>
+  </div>
+
+  <div class="screen" id="callScreen">
+    <video id="remoteVideo" autoplay playsinline></video>
+    <div id="remoteFallback">
+      <div id="remoteAvatar"></div>
+    </div>
+    <div id="callTop">
+      <div id="callStatus">Connecting…</div>
+      <div id="callName"></div>
+      <div id="callTimer">00:00</div>
+    </div>
+    <div id="localPip"></div>
+    <div id="callControls">
+      <div class="call-btn" id="muteBtn">🎤</div>
+      <div class="call-btn" id="camBtn">📷</div>
+      <div class="call-btn" id="endCallBtn">📞</div>
+    </div>
+  </div>
+
+</div>
+<div class="hint">Same Wi-Fi/network browser dusre tab me kholo test karne ke liye</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+const setupScreen = document.getElementById('setup');
+const waitingScreen = document.getElementById('waiting');
+const callScreen = document.getElementById('callScreen');
+
+function showScreen(el){
+  [setupScreen, waitingScreen, callScreen].forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+let myProfile = {};
+let partnerId = null;
+let localStream = null;
+let pc = null;
+let callT
