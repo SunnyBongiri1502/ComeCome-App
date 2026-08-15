@@ -3,116 +3,1580 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>Spark — Video Dating</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#0f0b18; font-family:'Inter',sans-serif; color:#f3eaf5; }
-  #app { position:fixed; inset:0; display:flex; flex-direction:column; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  .screen { flex:1; display:none; flex-direction:column; }
-  .screen.active { display:flex; }
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0f0b18;
+  font-family: 'Inter', sans-serif;
+  color: #f3eaf5;
+}
 
-  #setup { align-items:center; justify-content:center; padding:32px; text-align:center; }
-  #setup .logo { font-family:'Fraunces',serif; font-style:italic; font-size:34px; color:#ff5d73; margin-bottom:6px; }
-  #setup .logo span { color:#f2b84b; }
-  #setup .tagline { color:#a897b6; font-size:13px; margin-bottom:32px; }
-  #setup input {
-    width:100%; max-width:280px; padding:14px 16px; border-radius:12px; border:1px solid #ffffff22;
-    background:#211a2e; color:#f3eaf5; font-size:15px; margin-bottom:12px; outline:none;
+button,
+input {
+  font-family: inherit;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* SETUP */
+
+#setup {
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+
+.logo {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 42px;
+  color: #ff5d73;
+  margin-bottom: 6px;
+}
+
+.logo span {
+  color: #f2b84b;
+}
+
+.tagline {
+  color: #a897b6;
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+#setup input {
+  width: 100%;
+  max-width: 300px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #ffffff22;
+  background: #211a2e;
+  color: #f3eaf5;
+  font-size: 16px;
+  margin-bottom: 14px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+#setup input:focus {
+  border-color: #ff5d73;
+}
+
+#findBtn {
+  width: 100%;
+  max-width: 300px;
+  padding: 17px;
+  border-radius: 15px;
+  border: none;
+  background: linear-gradient(160deg, #ff5d73, #ff8b6b);
+  color: white;
+  font-weight: 700;
+  font-size: 17px;
+  margin-top: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#findBtn:active {
+  transform: scale(0.97);
+}
+
+#findBtn:disabled {
+  opacity: 0.6;
+}
+
+/* WAITING */
+
+#waiting {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+}
+
+.spinner {
+  width: 52px;
+  height: 52px;
+  border: 4px solid #ffffff18;
+  border-top-color: #ff5d73;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 22px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  #setup input:focus { border-color:#ff5d73; }
-  #findBtn {
-    width:100%; max-width:280px; padding:15px; border-radius:14px; border:none;
-    background:linear-gradient(160deg,#ff5d73,#ff8b6b); color:#fff; font-weight:700; font-size:15px; margin-top:10px;
-  }
-  #findBtn:active { transform:scale(0.97); }
-  #findBtn:disabled { opacity:0.6; }
+}
 
-  #waiting { align-items:center; justify-content:center; text-align:center; padding:32px; }
-  .spinner { width:52px; height:52px; border:4px solid #ffffff18; border-top-color:#ff5d73; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:22px; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  #waiting .msg { font-size:15px; color:#c9b8d6; margin-bottom:26px; }
-  #cancelBtn { padding:12px 28px; border-radius:12px; border:1px solid #ffffff22; background:transparent; color:#c9b8d6; font-size:13px; }
+.msg {
+  font-size: 15px;
+  color: #c9b8d6;
+  margin-bottom: 26px;
+}
 
-  #callScreen { position:relative; background:#0a0712; }
-  #remoteVideo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#1c1628; }
-  #remoteFallback {
-    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;
-  }
-  #remoteAvatar { width:130px; height:130px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:50px; font-weight:600; background:linear-gradient(160deg,#4a2f5e,#2b1e40); margin-bottom:14px; }
-  #callTop { position:absolute; top:0; left:0; right:0; z-index:3; padding:46px 20px 16px; text-align:center; background:linear-gradient(180deg, rgba(10,7,18,0.7), transparent); }
-  #callStatus { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#c9b8d6; }
-  #callName { font-family:'Fraunces',serif; font-size:20px; margin-top:2px; }
-  #callTimer { font-size:13px; color:#f3eaf5; margin-top:4px; font-variant-numeric:tabular-nums; }
+#cancelBtn {
+  padding: 13px 30px;
+  border-radius: 12px;
+  border: 1px solid #ffffff22;
+  background: transparent;
+  color: #c9b8d6;
+  font-size: 14px;
+  cursor: pointer;
+}
 
-  #localPip { position:absolute; top:110px; right:16px; width:90px; height:128px; border-radius:14px; overflow:hidden; background:#211a2e; border:2px solid #ffffff22; z-index:5; }
-  #localPip video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+/* CALL */
 
-  #callControls { position:absolute; bottom:0; left:0; right:0; z-index:3; display:flex; justify-content:center; gap:20px; padding:22px 24px 40px; background:linear-gradient(0deg, rgba(10,7,18,0.75), transparent); }
-  .call-btn { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; background:#211a2ecc; color:#f3eaf5; border:1px solid #ffffff15; }
-  .call-btn.on { background:#ffffff33; }
-  #endCallBtn { width:64px; height:64px; background:#ff3b3b; color:#fff; font-size:24px; }
-  .call-btn:active { transform:scale(0.9); }
+#callScreen {
+  position: relative;
+  background: #0a0712;
+  overflow: hidden;
+}
 
-  .hint { position:fixed; bottom:8px; left:0; right:0; text-align:center; font-size:10px; color:#4a3f5c; z-index:10; }
+#remoteVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #1c1628;
+  z-index: 0;
+}
+
+#remoteFallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+#remoteAvatar {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-size: 50px;
+  font-weight: 600;
+  background: linear-gradient(160deg, #4a2f5e, #2b1e40);
+}
+
+#callTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding: 46px 20px 16px;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    rgba(10,7,18,0.75),
+    transparent
+  );
+}
+
+#callStatus {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c9b8d6;
+}
+
+#callName {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  margin-top: 3px;
+}
+
+#callTimer {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+#localPip {
+  position: absolute;
+  top: 110px;
+  right: 16px;
+  width: 100px;
+  height: 140px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #211a2e;
+  border: 2px solid #ffffff22;
+  z-index: 5;
+}
+
+#localPip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#callControls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 22px 24px 40px;
+  background: linear-gradient(
+    0deg,
+    rgba(10,7,18,0.8),
+    transparent
+  );
+}
+
+.call-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+  background: #211a2ecc;
+  color: #f3eaf5;
+  border: 1px solid #ffffff15;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.call-btn.on {
+  background: #ffffff33;
+}
+
+#endCallBtn {
+  width: 66px;
+  height: 66px;
+  background: #ff3b3b;
+  color: white;
+  font-size: 25px;
+}
+
+.call-btn:active {
+  transform: scale(0.9);
+}
+
+.hint {
+  position: fixed;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: #4a3f5c;
+  z-index: 20;
+  pointer-events: none;
+}
 </style>
 </head>
+
 <body>
 
 <div id="app">
 
+  <!-- SETUP -->
+
   <div class="screen active" id="setup">
-    <div class="logo">spark<span>.</span></div>
-    <div class="tagline">Real-time video matching</div>
-    <input type="text" id="nameInput" placeholder="Your name" maxlength="20">
-    <input type="number" id="ageInput" placeholder="Your age" min="18" max="99">
-    <button id="findBtn">Find a Match</button>
+
+    <div class="logo">
+      spark<span>.</span>
+    </div>
+
+    <div class="tagline">
+      Real-time video matching
+    </div>
+
+    <input
+      type="text"
+      id="nameInput"
+      placeholder="Your name"
+      maxlength="20"
+      autocomplete="name"
+    >
+
+    <input
+      type="number"
+      id="ageInput"
+      placeholder="Your age"
+      min="18"
+      max="99"
+      inputmode="numeric"
+    >
+
+    <button id="findBtn" type="button">
+      Find a Match
+    </button>
+
   </div>
+
+
+  <!-- WAITING -->
 
   <div class="screen" id="waiting">
+
     <div class="spinner"></div>
-    <div class="msg">Looking for someone to match you with…</div>
-    <button id="cancelBtn">Cancel</button>
+
+    <div class="msg" id="waitingMsg">
+      Looking for someone to match you with…
+    </div>
+
+    <button id="cancelBtn" type="button">
+      Cancel
+    </button>
+
   </div>
 
+
+  <!-- CALL -->
+
   <div class="screen" id="callScreen">
-    <video id="remoteVideo" autoplay playsinline></video>
+
+    <video
+      id="remoteVideo"
+      autoplay
+      playsinline
+    ></video>
+
     <div id="remoteFallback">
       <div id="remoteAvatar"></div>
     </div>
+
     <div id="callTop">
-      <div id="callStatus">Connecting…</div>
+
+      <div id="callStatus">
+        Connecting…
+      </div>
+
       <div id="callName"></div>
-      <div id="callTimer">00:00</div>
+
+      <div id="callTimer">
+        00:00
+      </div>
+
     </div>
+
     <div id="localPip"></div>
+
     <div id="callControls">
-      <div class="call-btn" id="muteBtn">🎤</div>
-      <div class="call-btn" id="camBtn">📷</div>
-      <div class="call-btn" id="endCallBtn">📞</div>
+
+      <div class="call-btn" id="muteBtn">
+        🎤
+      </div>
+
+      <div class="call-btn" id="camBtn">
+        📷
+      </div>
+
+      <div class="call-btn" id="endCallBtn">
+        📞
+      </div>
+
     </div>
+
   </div>
 
 </div>
-<div class="hint">Same Wi-Fi/network browser dusre tab me kholo test karne ke liye</div>
+
+<div class="hint">
+  Real-time video matching
+</div>
+
 
 <script src="/socket.io/socket.io.js"></script>
+
 <script>
-const socket = io();
 
-const setupScreen = document.getElementById('setup');
-const waitingScreen = document.getElementById('waiting');
-const callScreen = document.getElementById('callScreen');
+/* =========================
+   SOCKET
+========================= */
 
-function showScreen(el){
-  [setupScreen, waitingScreen, callScreen].forEach(s=>s.classList.remove('active'));
-  el.classList.add('active');
-}
+const socket = io({
+  transports: ['websocket', 'polling'],
+  reconnection: true
+});
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const setupScreen =
+  document.getElementById('setup');
+
+const waitingScreen =
+  document.getElementById('waiting');
+
+const callScreen =
+  document.getElementById('callScreen');
+
+const nameInput =
+  document.getElementById('nameInput');
+
+const ageInput =
+  document.getElementById('ageInput');
+
+const findBtn =
+  document.getElementById('findBtn');
+
+const cancelBtn =
+  document.getElementById('cancelBtn');
+
+const waitingMsg =
+  document.getElementById('waitingMsg');
+
+const remoteVideo =
+  document.getElementById('remoteVideo');
+
+const remoteFallback =
+  document.getElementById('remoteFallback');
+
+const remoteAvatar =
+  document.getElementById('remoteAvatar');
+
+const localPip =
+  document.getElementById('localPip');
+
+const callStatus =
+  document.getElementById('callStatus');
+
+const callName =
+  document.getElementById('callName');
+
+const callTimer =
+  document.getElementById('callTimer');
+
+const muteBtn =
+  document.getElementById('muteBtn');
+
+const camBtn =
+  document.getElementById('camBtn');
+
+const endCallBtn =
+  document.getElementById('endCallBtn');
+
+
+/* =========================
+   VARIABLES
+========================= */
 
 let myProfile = {};
+
 let partnerId = null;
+
 let localStream = null;
+
 let pc = null;
-let callT
+
+let isInitiator = false;
+
+let timerInterval = null;
+
+let callSeconds = 0;
+
+let pendingCandidates = [];
+
+let isEnding = false;
+
+
+/* =========================
+   SCREEN
+========================= */
+
+function showScreen(screen) {
+
+  [
+    setupScreen,
+    waitingScreen,
+    callScreen
+  ].forEach(s => {
+    s.classList.remove('active');
+  });
+
+  screen.classList.add('active');
+}
+
+
+/* =========================
+   SOCKET STATUS
+========================= */
+
+socket.on('connect', () => {
+
+  console.log(
+    'Socket connected:',
+    socket.id
+  );
+
+});
+
+
+socket.on('disconnect', () => {
+
+  console.log('Socket disconnected');
+
+});
+
+
+/* =========================
+   FIND MATCH
+========================= */
+
+findBtn.addEventListener('click', findMatch);
+
+
+async function findMatch() {
+
+  const name =
+    nameInput.value.trim();
+
+  const age =
+    Number(ageInput.value);
+
+
+  if (!name) {
+
+    alert('Apna naam enter karo.');
+
+    nameInput.focus();
+
+    return;
+  }
+
+
+  if (!age || age < 18 || age > 99) {
+
+    alert('Age 18 se 99 ke beech honi chahiye.');
+
+    ageInput.focus();
+
+    return;
+  }
+
+
+  findBtn.disabled = true;
+
+  findBtn.textContent =
+    'Starting camera…';
+
+
+  myProfile = {
+    name: name,
+    age: age
+  };
+
+
+  try {
+
+    /*
+      Camera + microphone permission.
+      Ye user ke Find a Match tap ke turant
+      baad hota hai, isliye mobile browser
+      permission allow kar sakta hai.
+    */
+
+    await startLocalMedia();
+
+
+    showScreen(waitingScreen);
+
+    waitingMsg.textContent =
+      'Looking for someone to match you with…';
+
+
+    /*
+      Tumhare server.js ka exact event:
+      find-match
+    */
+
+    socket.emit(
+      'find-match',
+      myProfile
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'Camera error:',
+      error
+    );
+
+    findBtn.disabled = false;
+
+    findBtn.textContent =
+      'Find a Match';
+
+
+    alert(
+      'Camera/Microphone permission allow karo. ' +
+      'Safari me Settings → Camera aur Microphone bhi check karo.'
+    );
+
+  }
+
+}
+
+
+/* =========================
+   LOCAL CAMERA
+========================= */
+
+async function startLocalMedia() {
+
+  if (localStream) {
+    return localStream;
+  }
+
+
+  if (!navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia) {
+
+    throw new Error(
+      'Camera API available nahi hai.'
+    );
+
+  }
+
+
+  localStream =
+    await navigator.mediaDevices.getUserMedia({
+
+      video: {
+        facingMode: 'user',
+        width: {
+          ideal: 640
+        },
+        height: {
+          ideal: 480
+        }
+      },
+
+      audio: true
+
+    });
+
+
+  const video =
+    document.createElement('video');
+
+  video.autoplay = true;
+
+  video.playsInline = true;
+
+  video.muted = true;
+
+  video.srcObject = localStream;
+
+  localPip.innerHTML = '';
+
+  localPip.appendChild(video);
+
+
+  return localStream;
+}
+
+
+/* =========================
+   MATCHED
+========================= */
+
+socket.on('matched', async (data) => {
+
+  console.log(
+    'MATCHED:',
+    data
+  );
+
+
+  partnerId =
+    data.partnerId;
+
+  isInitiator =
+    !!data.initiator;
+
+
+  const partner =
+    data.partnerProfile || {};
+
+
+  callName.textContent =
+    partner.name
+      ? `${partner.name}, ${partner.age || ''}`
+      : 'Matched user';
+
+
+  remoteAvatar.textContent =
+    partner.name
+      ? partner.name.charAt(0).toUpperCase()
+      : '?';
+
+
+  showScreen(callScreen);
+
+
+  callStatus.textContent =
+    isInitiator
+      ? 'Connecting…'
+      : 'Waiting for connection…';
+
+
+  try {
+
+    await createPeerConnection();
+
+
+    /*
+      Initiator offer banayega.
+    */
+
+    if (isInitiator) {
+
+      await createOffer();
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      'WebRTC start error:',
+      error
+    );
+
+    callStatus.textContent =
+      'Connection failed';
+
+  }
+
+});
+
+
+/* =========================
+   WAITING
+========================= */
+
+socket.on('waiting', () => {
+
+  console.log('Waiting for partner');
+
+  showScreen(waitingScreen);
+
+  waitingMsg.textContent =
+    'Waiting for another person…';
+
+});
+
+
+/* =========================
+   PEER CONNECTION
+========================= */
+
+function createPeerConnection() {
+
+  /*
+    Public Google STUN server.
+    Isse normal NAT connections me
+    WebRTC connection banane me help milegi.
+
+    Production app me TURN server bhi
+    add karna recommended hai.
+  */
+
+  pc = new RTCPeerConnection({
+
+    iceServers: [
+
+      {
+        urls: [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302'
+        ]
+      }
+
+    ]
+
+  });
+
+
+  /* LOCAL TRACKS */
+
+  if (localStream) {
+
+    localStream
+      .getTracks()
+      .forEach(track => {
+
+        pc.addTrack(
+          track,
+          localStream
+        );
+
+      });
+
+  }
+
+
+  /* REMOTE TRACK */
+
+  pc.ontrack = event => {
+
+    console.log(
+      'Remote track received'
+    );
+
+
+    if (event.streams &&
+        event.streams[0]) {
+
+      remoteVideo.srcObject =
+        event.streams[0];
+
+      remoteFallback.style.display =
+        'none';
+
+
+      remoteVideo.play()
+        .catch(err => {
+
+          console.log(
+            'Remote video autoplay:',
+            err
+          );
+
+        });
+
+
+      callStatus.textContent =
+        'Connected';
+
+
+      startTimer();
+
+    }
+
+  };
+
+
+  /* ICE CANDIDATE */
+
+  pc.onicecandidate = event => {
+
+    if (!event.candidate) {
+      return;
+    }
+
+
+    if (!partnerId) {
+      return;
+    }
+
+
+    socket.emit('signal', {
+
+      to: partnerId,
+
+      data: {
+        type: 'candidate',
+        candidate: event.candidate
+      }
+
+    });
+
+  };
+
+
+  /* CONNECTION STATE */
+
+  pc.onconnectionstatechange = () => {
+
+    console.log(
+      'Connection state:',
+      pc.connectionState
+    );
+
+
+    if (pc.connectionState === 'connected') {
+
+      callStatus.textContent =
+        'Connected';
+
+      startTimer();
+
+    }
+
+
+    if (
+      pc.connectionState === 'disconnected' ||
+      pc.connectionState === 'failed'
+    ) {
+
+      callStatus.textContent =
+        'Connection lost';
+
+    }
+
+
+    if (pc.connectionState === 'closed') {
+
+      callStatus.textContent =
+        'Call ended';
+
+    }
+
+  };
+
+
+  /* ICE STATE */
+
+  pc.oniceconnectionstatechange = () => {
+
+    console.log(
+      'ICE:',
+      pc.iceConnectionState
+    );
+
+  };
+
+
+  return pc;
+}
+
+
+/* =========================
+   CREATE OFFER
+========================= */
+
+async function createOffer() {
+
+  if (!pc) {
+    return;
+  }
+
+
+  const offer =
+    await pc.createOffer();
+
+
+  await pc.setLocalDescription(
+    offer
+  );
+
+
+  socket.emit('signal', {
+
+    to: partnerId,
+
+    data: {
+      type: 'offer',
+      offer: offer
+    }
+
+  });
+
+}
+
+
+/* =========================
+   SIGNALING
+========================= */
+
+socket.on('signal', async (payload) => {
+
+  console.log(
+    'SIGNAL:',
+    payload
+  );
+
+
+  if (!pc) {
+
+    console.log(
+      'Peer connection not ready'
+    );
+
+    return;
+
+  }
+
+
+  const data =
+    payload.data;
+
+
+  try {
+
+    /* OFFER */
+
+    if (data.type === 'offer') {
+
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(
+          data.offer
+        )
+      );
+
+
+      await flushPendingCandidates();
+
+
+      const answer =
+        await pc.createAnswer();
+
+
+      await pc.setLocalDescription(
+        answer
+      );
+
+
+      socket.emit('signal', {
+
+        to: payload.from,
+
+        data: {
+          type: 'answer',
+          answer: answer
+        }
+
+      });
+
+    }
+
+
+    /* ANSWER */
+
+    else if (data.type === 'answer') {
+
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(
+          data.answer
+        )
+      );
+
+
+      await flushPendingCandidates();
+
+    }
+
+
+    /* ICE CANDIDATE */
+
+    else if (data.type === 'candidate') {
+
+      const candidate =
+        new RTCIceCandidate(
+          data.candidate
+        );
+
+
+      /*
+        Agar remote description abhi set nahi
+        hui hai to candidate queue me rakho.
+      */
+
+      if (
+        pc.remoteDescription &&
+        pc.remoteDescription.type
+      ) {
+
+        await pc.addIceCandidate(
+          candidate
+        );
+
+      } else {
+
+        pendingCandidates.push(
+          candidate
+        );
+
+      }
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      'Signal error:',
+      error
+    );
+
+  }
+
+});
+
+
+/* =========================
+   FLUSH ICE
+========================= */
+
+async function flushPendingCandidates() {
+
+  if (!pc) {
+    return;
+  }
+
+
+  while (
+    pendingCandidates.length > 0
+  ) {
+
+    const candidate =
+      pendingCandidates.shift();
+
+
+    try {
+
+      await pc.addIceCandidate(
+        candidate
+      );
+
+    } catch (error) {
+
+      console.error(
+        'ICE candidate error:',
+        error
+      );
+
+    }
+
+  }
+
+}
+
+
+/* =========================
+   CANCEL
+========================= */
+
+cancelBtn.addEventListener(
+  'click',
+  cancelMatch
+);
+
+
+function cancelMatch() {
+
+  socket.emit(
+    'cancel-find'
+  );
+
+
+  findBtn.disabled = false;
+
+  findBtn.textContent =
+    'Find a Match';
+
+
+  showScreen(setupScreen);
+
+}
+
+
+/* =========================
+   MUTE
+========================= */
+
+muteBtn.addEventListener(
+  'click',
+  toggleMute
+);
+
+
+function toggleMute() {
+
+  if (!localStream) {
+    return;
+  }
+
+
+  const tracks =
+    localStream.getAudioTracks();
+
+
+  if (!tracks.length) {
+    return;
+  }
+
+
+  const enabled =
+    tracks[0].enabled;
+
+
+  tracks.forEach(track => {
+
+    track.enabled =
+      !enabled;
+
+  });
+
+
+  muteBtn.textContent =
+    enabled
+      ? '🔇'
+      : '🎤';
+
+
+  muteBtn.classList.toggle(
+    'on',
+    !enabled
+  );
+
+}
+
+
+/* =========================
+   CAMERA
+========================= */
+
+camBtn.addEventListener(
+  'click',
+  toggleCamera
+);
+
+
+function toggleCamera() {
+
+  if (!localStream) {
+    return;
+  }
+
+
+  const tracks =
+    localStream.getVideoTracks();
+
+
+  if (!tracks.length) {
+    return;
+  }
+
+
+  const enabled =
+    tracks[0].enabled;
+
+
+  tracks.forEach(track => {
+
+    track.enabled =
+      !enabled;
+
+  });
+
+
+  camBtn.textContent =
+    enabled
+      ? '🚫'
+      : '📷';
+
+
+  camBtn.classList.toggle(
+    'on',
+    !enabled
+  );
+
+}
+
+
+/* =========================
+   END CALL
+========================= */
+
+endCallBtn.addEventListener(
+  'click',
+  endCall
+);
+
+
+function endCall() {
+
+  if (isEnding) {
+    return;
+  }
+
+
+  isEnding = true;
+
+
+  socket.emit(
+    'end-call'
+  );
+
+
+  cleanupCall();
+
+
+  setTimeout(() => {
+
+    isEnding = false;
+
+  }, 500);
+
+}
+
+
+/* =========================
+   PARTNER ENDED CALL
+========================= */
+
+socket.on('call-ended', () => {
+
+  console.log(
+    'Partner ended call'
+  );
+
+
+  cleanupCall();
+
+
+  alert(
+    'Call ended by the other person.'
+  );
+
+});
+
+
+/* =========================
+   CLEANUP
+========================= */
+
+function cleanupCall() {
+
+  stopTimer();
+
+
+  if (pc) {
+
+    try {
+      pc.close();
+    } catch (error) {
+      console.log(error);
+    }
+
+    pc = null;
+
+  }
+
+
+  if (localStream) {
+
+    localStream
+      .getTracks()
+      .forEach(track => {
+
+        track.stop();
+
+      });
+
+    localStream = null;
+
+  }
+
+
+  remoteVideo.srcObject =
+    null;
+
+
+  localPip.innerHTML =
+    '';
+
+
+  remoteFallback.style.display =
+    'flex';
+
+
+  partnerId =
+    null;
+
+
+  isInitiator =
+    false;
+
+
+  pendingCandidates =
+    [];
+
+
+  callStatus.textContent =
+    'Connecting…';
+
+
+  callName.textContent =
+    '';
+
+
+  callTimer.textContent =
+    '00:00';
+
+
+  muteBtn.textContent =
+    '🎤';
+
+  camBtn.textContent =
+    '📷';
+
+
+  muteBtn.classList.remove('on');
+
+  camBtn.classList.remove('on');
+
+
+  findBtn.disabled =
+    false;
+
+  findBtn.textContent =
+    'Find a Match';
+
+
+  showScreen(
+    setupScreen
+  );
+
+}
+
+
+/* =========================
+   TIMER
+========================= */
+
+function startTimer() {
+
+  if (timerInterval) {
+    return;
+  }
+
+
+  callSeconds = 0;
+
+
+  timerInterval =
+    setInterval(() => {
+
+      callSeconds++;
+
+
+      const minutes =
+        Math.floor(
+          callSeconds / 60
+        );
+
+
+      const seconds =
+        callSeconds % 60;
+
+
+      callTimer.textContent =
+        String(minutes).padStart(2, '0')
+        + ':' +
+        String(seconds).padStart(2, '0');
+
+    }, 1000);
+
+}
+
+
+function stopTimer() {
+
+  if (timerInterval) {
+
+    clearInterval(
+      timerInterval
+    );
+
+    timerInterval =
+      null;
+
+  }
+
+
+  callSeconds =
+    0;
+
+  callTimer.textContent =
+    '00:00';
+
+}
+
+
+/* =========================
+   PAGE CLOSE
+========================= */
+
+window.addEventListener(
+  'beforeunload',
+  () => {
+
+    try {
+
+      socket.emit(
+        'end-call'
+      );
+
+    } catch (error) {}
+
+  }
+);
+
+
+/* =========================
+   PREVENT DOUBLE TAP
+========================= */
+
+findBtn.addEventListener(
+  'touchend',
+  (event) => {
+
+    event.preventDefault();
+
+    if (!findBtn.disabled) {
+      findMatch();
+    }
+
+  },
+  { passive: false }
+);
+
+</script>
+
+</body>
+</html>
